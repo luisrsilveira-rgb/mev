@@ -1,0 +1,194 @@
+/* MEV Consulta */
+:root {
+  --azul: #1565c0;
+  --azul-escuro: #0d47a1;
+  --verde: #2e7d32;
+  --vermelho: #c62828;
+  --ambar: #b26a00;
+  --fundo: #f4f7fa;
+  --cartao: #ffffff;
+  --texto: #1f2933;
+  --texto-suave: #52606d;
+  --borda: #d9e2ec;
+  --raio: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  line-height: 1.55;
+}
+
+.topo {
+  background: linear-gradient(120deg, var(--azul-escuro), var(--azul));
+  color: #fff;
+  padding: 20px 16px;
+}
+.topo-inner { max-width: 960px; margin: 0 auto; }
+.topo h1 { margin: 0; font-size: 1.5rem; }
+.subtitulo { margin: 4px 0 0; opacity: 0.9; font-size: 0.95rem; }
+
+.container { max-width: 960px; margin: 0 auto; padding: 16px; }
+
+.card {
+  background: var(--cartao);
+  border: 1px solid var(--borda);
+  border-radius: var(--raio);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card > h2 { margin: 0 0 14px; font-size: 1.15rem; color: var(--azul-escuro); }
+
+/* Paciente */
+.grid-paciente {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.grid-paciente label { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--texto-suave); gap: 4px; }
+.grid-paciente .col-full { grid-column: 1 / -1; }
+input, select, textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--borda);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--texto);
+}
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--azul); outline-offset: 0; border-color: var(--azul); }
+
+/* Gravação */
+.consentimento { display: flex; gap: 8px; align-items: flex-start; font-size: 0.9rem; margin-bottom: 12px; }
+.controles-gravacao { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 12px; }
+.status { font-size: 0.88rem; color: var(--texto-suave); }
+
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn:not(:disabled):hover { filter: brightness(1.08); }
+.btn-primario { background: var(--azul); color: #fff; }
+.btn-secundario { background: #e3edf7; color: var(--azul-escuro); }
+.btn.gravando { background: var(--vermelho); }
+
+.pulso {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--vermelho);
+  margin-right: 6px;
+  animation: pulsar 1.2s infinite;
+}
+@keyframes pulsar { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+.interim {
+  font-style: italic;
+  color: var(--texto-suave);
+  background: #eef4fb;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  min-height: 1.4em;
+}
+
+.label-transcricao { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--texto-suave); }
+#transcricao { width: 100%; resize: vertical; font-size: 0.95rem; }
+
+.dica { font-size: 0.85rem; color: var(--texto-suave); margin: 10px 0 0; }
+
+/* Abas */
+.abas { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 0; border-bottom: 2px solid var(--borda); padding-bottom: 0; }
+.aba {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 8px 14px;
+  border: 1px solid var(--borda);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #eef2f6;
+  cursor: pointer;
+  color: var(--texto-suave);
+}
+.aba.ativa { background: var(--cartao); color: var(--azul-escuro); font-weight: 700; border-color: var(--azul); }
+
+.painel { padding: 16px 4px; }
+
+/* Blocos de conteúdo */
+.bloco {
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--azul);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  background: #fbfdff;
+}
+.bloco h3 { margin: 0 0 6px; font-size: 1rem; }
+.bloco p { margin: 0 0 4px; }
+.bloco ul { margin: 4px 0 0; padding-left: 20px; }
+.bloco.alerta { border-left-color: var(--vermelho); background: #fff7f7; }
+.bloco.ok { border-left-color: var(--verde); background: #f6fbf6; }
+.bloco.hipotese.prob-alta { border-left-color: var(--vermelho); }
+.bloco.hipotese.prob-media { border-left-color: var(--ambar); }
+.bloco.hipotese.prob-baixa { border-left-color: var(--verde); }
+
+.vazio { color: var(--texto-suave); font-style: italic; }
+.mini-titulo { font-size: 0.85rem; font-weight: 600; margin: 8px 0 0; color: var(--texto-suave); }
+
+.tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #e3edf7;
+  color: var(--azul-escuro);
+  border-radius: 20px;
+  padding: 2px 10px;
+  vertical-align: middle;
+}
+.tag-sugerido { background: #fff3e0; color: var(--ambar); }
+
+/* Tabelas */
+table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borda); vertical-align: top; }
+th { background: #eef2f6; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-suave); }
+.linha-urgente td { background: #fff3f3; }
+
+/* Prescrição */
+.item-prescricao { padding: 10px 0; border-bottom: 1px dashed var(--borda); }
+.item-prescricao:last-child { border-bottom: none; }
+.orientacao { font-size: 0.88rem; color: var(--texto-suave); margin-top: 2px; }
+
+/* Plano */
+.secao-plano { font-size: 1.1rem; color: var(--azul-escuro); margin: 20px 0 10px; }
+.smart { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 0; font-size: 0.92rem; }
+.smart dt { font-weight: 700; color: var(--azul-escuro); }
+.smart dd { margin: 0; }
+.duas-colunas { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 640px) { .duas-colunas { grid-template-columns: 1fr; } }
+
+/* Rodapé */
+.rodape {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  border-top: 1px solid var(--borda);
+  padding-top: 12px;
+  margin-top: 8px;
+}
+
+/* Impressão */
+@media print {
+  .topo, .consentimento, .controles-gravacao, .dica, .abas,
+  #interim, .label-transcricao, .card:nth-of-type(1), .card:nth-of-type(2) { display: none !important; }
+  body { background: #fff; }
+  .card { border: none; padding: 0; }
+  .bloco { break-inside: avoid; }
+}

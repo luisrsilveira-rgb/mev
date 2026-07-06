@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MEV Consulta — Assistente de Consultas</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-inner">
+      <h1>🩺 MEV Consulta</h1>
+      <p class="subtitulo">Assistente de consultas com foco em medicina do estilo de vida</p>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Dados do paciente -->
+    <section class="card">
+      <h2>1. Paciente</h2>
+      <div class="grid-paciente">
+        <label>Nome (ou iniciais)
+          <input type="text" id="pac-nome" placeholder="ex.: J.S." autocomplete="off" />
+        </label>
+        <label>Idade
+          <input type="number" id="pac-idade" min="0" max="120" placeholder="ex.: 52" />
+        </label>
+        <label>Sexo
+          <select id="pac-sexo">
+            <option value="">—</option>
+            <option>Feminino</option>
+            <option>Masculino</option>
+            <option>Outro</option>
+          </select>
+        </label>
+        <label>Peso (kg)
+          <input type="number" id="pac-peso" min="0" step="0.1" placeholder="ex.: 84" />
+        </label>
+        <label>Altura (cm)
+          <input type="number" id="pac-altura" min="0" placeholder="ex.: 170" />
+        </label>
+        <label class="col-full">Comorbidades / medicamentos em uso / observações
+          <input type="text" id="pac-obs" placeholder="ex.: HAS, DM2; losartana 50 mg; sedentário" autocomplete="off" />
+        </label>
+      </div>
+    </section>
+
+    <!-- Gravação -->
+    <section class="card">
+      <h2>2. Consulta — áudio ambiente</h2>
+      <label class="consentimento">
+        <input type="checkbox" id="consentimento" />
+        Informei o(a) paciente e obtive consentimento para a captação do áudio da consulta.
+      </label>
+      <div class="controles-gravacao">
+        <button id="btn-gravar" class="btn btn-primario" disabled>🎙️ Iniciar gravação</button>
+        <span id="status-gravacao" class="status">Marque o consentimento para habilitar a gravação.</span>
+      </div>
+      <div id="interim" class="interim" hidden></div>
+      <label class="label-transcricao">Transcrição (editável — revise antes de analisar)
+        <textarea id="transcricao" rows="10" placeholder="A transcrição do áudio aparecerá aqui em tempo real. Você também pode digitar ou colar o texto da consulta."></textarea>
+      </label>
+      <p class="dica">💡 Dite naturalmente durante a consulta: <em>"vou solicitar hemograma completo e perfil lipídico"</em>, <em>"prescrevo metformina 500 mg, via oral, duas vezes ao dia, uso contínuo"</em>. O assistente separa exames e prescrição automaticamente.</p>
+    </section>
+
+    <!-- Análise -->
+    <section class="card">
+      <h2>3. Análise da consulta</h2>
+      <div class="controles-gravacao">
+        <button id="btn-analisar" class="btn btn-primario">🧠 Analisar consulta</button>
+        <button id="btn-plano" class="btn btn-secundario" disabled>🥗 Gerar plano de estilo de vida</button>
+        <button id="btn-imprimir" class="btn btn-secundario" hidden>🖨️ Imprimir / PDF</button>
+        <span id="status-analise" class="status"></span>
+      </div>
+
+      <div id="resultados" hidden>
+        <nav class="abas" id="abas"></nav>
+        <div id="conteudo-abas"></div>
+      </div>
+    </section>
+
+    <footer class="rodape">
+      <p><strong>Aviso:</strong> este aplicativo é uma ferramenta de apoio à decisão clínica gerada por inteligência artificial.
+      Todo o conteúdo (resumo, exames, prescrição, hipóteses diagnósticas e planos) deve ser revisado e validado pelo(a) médico(a)
+      responsável antes de qualquer uso. Não substitui o julgamento clínico.</p>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
