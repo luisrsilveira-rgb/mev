@@ -191,6 +191,23 @@
 
   el.btnImprimir.addEventListener("click", () => window.print());
 
+  // Mostra qual IA está configurada (Claude ou modelo local via Ollama)
+  fetch("/api/saude")
+    .then((r) => r.json())
+    .then((s) => {
+      const badge = $("badge-ia");
+      if (!badge) return;
+      badge.hidden = false;
+      if (s.provedor === "ollama") {
+        badge.textContent = `IA local (Ollama · ${s.modelo})`;
+      } else if (s.apiKeyConfigurada) {
+        badge.textContent = `Claude (${s.modelo})`;
+      } else {
+        badge.textContent = "⚠️ IA não configurada — veja o README";
+      }
+    })
+    .catch(() => {});
+
   function setOcupado(botao, ocupado, rotulo) {
     botao.disabled = ocupado;
     botao.textContent = rotulo;

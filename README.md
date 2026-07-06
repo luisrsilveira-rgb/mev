@@ -6,7 +6,7 @@ Assistente de consultas médicas com foco em **medicina do estilo de vida**. O a
 - 📋 **Resume a consulta** nos tópicos mais importantes (queixa principal, história, antecedentes, hábitos…)
 - 🔬 **Separa os exames** conforme você dita ("vou solicitar hemograma…") e sugere exames complementares
 - 💊 **Monta a prescrição** a partir do que você dita (medicamento, dose, via, frequência, duração)
-- 🧩 **Diagnóstico diferencial** com IA (Claude): hipóteses ordenadas por probabilidade, fundamentação e próximos passos
+- 🧩 **Diagnóstico diferencial** com IA (Claude **ou** modelo local gratuito via Ollama): hipóteses ordenadas por probabilidade, fundamentação e próximos passos
 - 🎯 **Metas SMART** de mudança de hábitos, **dieta personalizada** e **plano de exercícios** adequados ao paciente
 
 > ⚠️ **Aviso:** ferramenta de apoio à decisão clínica. Todo o conteúdo gerado deve ser revisado e validado pelo(a) médico(a) responsável. Não substitui o julgamento clínico.
@@ -14,8 +14,10 @@ Assistente de consultas médicas com foco em **medicina do estilo de vida**. O a
 ## Requisitos
 
 - Node.js 18+ (recomendado 22)
-- Chave da API da Anthropic ([platform.claude.com](https://platform.claude.com/))
 - Navegador **Google Chrome** ou **Microsoft Edge** (a transcrição usa a Web Speech API)
+- Uma IA para análise — escolha **uma** das opções:
+  - **Claude API** (paga, melhor qualidade clínica) — chave em [platform.claude.com](https://platform.claude.com/)
+  - **Ollama** (grátis, modelo local no seu computador) — [ollama.com](https://ollama.com/)
 
 ## Como rodar
 
@@ -23,15 +25,43 @@ Assistente de consultas médicas com foco em **medicina do estilo de vida**. O a
 # 1. Instalar dependências
 npm install
 
-# 2. Configurar a chave da API
+# 2. Configurar a IA
 cp .env.example .env
-# edite o .env e cole sua ANTHROPIC_API_KEY
+# edite o .env e escolha a opção A ou B abaixo
 
 # 3. Iniciar
 npm start
 ```
 
-Abra **http://localhost:3000** no Chrome/Edge e permita o acesso ao microfone.
+Abra **http://localhost:3000** no Chrome/Edge e permita o acesso ao microfone. O cabeçalho da seção "Análise da consulta" mostra qual IA está ativa.
+
+### Opção A — Claude (paga, recomendada)
+
+No `.env`:
+
+```env
+IA_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-sua-chave
+```
+
+### Opção B — Ollama (grátis, 100% local)
+
+1. Instale o Ollama: [ollama.com/download](https://ollama.com/download) (Windows, Mac ou Linux)
+2. Baixe um modelo (uma única vez, ~5 GB):
+   ```bash
+   ollama pull llama3.1:8b
+   ```
+3. No `.env`:
+   ```env
+   IA_PROVIDER=ollama
+   # OLLAMA_MODEL=llama3.1:8b   (padrão)
+   ```
+
+Com o Ollama, **nenhum dado sai do seu computador** — a transcrição da consulta é analisada localmente, o que é um ganho de privacidade. Em compensação:
+
+- ⚠️ Modelos locais pequenos (7–8B) têm **qualidade clínica bem inferior** ao Claude: hipóteses diagnósticas mais rasas, maior chance de erros e de itens inventados. Revise com atenção redobrada.
+- Se seu computador aguentar (16 GB+ de RAM), `ollama pull qwen2.5:14b` e `OLLAMA_MODEL=qwen2.5:14b` melhoram bastante o resultado.
+- Sem placa de vídeo, a análise pode levar alguns minutos.
 
 ## Fluxo de uso
 
@@ -49,7 +79,7 @@ Abra **http://localhost:3000** no Chrome/Edge e permita o acesso ao microfone.
 |---|---|
 | Transcrição de voz | Web Speech API do navegador (pt-BR, contínua, com reinício automático) |
 | Backend | Node.js + Express (`server.js`) |
-| IA clínica | Claude API (`claude-opus-4-8`) com *structured outputs* (JSON garantido por schema) e *adaptive thinking* |
+| IA clínica | Claude API (`claude-opus-4-8`, structured outputs + adaptive thinking) **ou** Ollama local (`/api/chat` com `format` por JSON schema) |
 | Frontend | HTML/CSS/JS puro, sem build |
 
 ### Endpoints
@@ -61,7 +91,7 @@ Abra **http://localhost:3000** no Chrome/Edge e permita o acesso ao microfone.
 ## Privacidade e boas práticas
 
 - Obtenha **consentimento do paciente** antes de gravar (o app exige marcar essa confirmação).
-- O áudio **não é armazenado**: apenas o texto transcrito é enviado à API da Anthropic para análise.
+- O áudio **não é armazenado**: apenas o texto transcrito é enviado para análise (à API da Anthropic, ou a lugar nenhum se você usar Ollama local).
 - Nenhum dado é persistido no servidor; cada análise é independente.
 - Prefira identificar o paciente por **iniciais** para minimizar dados pessoais.
 
