@@ -15,6 +15,24 @@ const MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
 const OLLAMA_URL = (process.env.OLLAMA_URL || "http://localhost:11434").replace(/\/$/, "");
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "llama3.1:8b";
 
+// Transcrição do áudio: "browser" (reconhecimento do navegador, padrão),
+// "groq" (Whisper via API gratuita da Groq) ou "openai" (Whisper pago)
+const TRANSCRIBER = (process.env.TRANSCRIBER || "browser").toLowerCase();
+const TRANSCRITORES = {
+  groq: {
+    url: process.env.TRANSCRICAO_URL || "https://api.groq.com/openai/v1/audio/transcriptions",
+    chave: () => process.env.GROQ_API_KEY,
+    nomeChave: "GROQ_API_KEY",
+    modelo: process.env.WHISPER_MODEL || "whisper-large-v3-turbo",
+  },
+  openai: {
+    url: process.env.TRANSCRICAO_URL || "https://api.openai.com/v1/audio/transcriptions",
+    chave: () => process.env.OPENAI_API_KEY,
+    nomeChave: "OPENAI_API_KEY",
+    modelo: process.env.WHISPER_MODEL || "whisper-1",
+  },
+};
+
 const app = express();
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "public")));
@@ -69,7 +87,21 @@ Sua tarefa agora: analisar a transcrição de uma consulta e produzir, no format
 
 5. PRÓXIMOS PASSOS — condutas sugeridas (seguimento, encaminhamentos, orientações, reavaliação).
 
-6. ALERTAS — red flags do quadro, interações medicamentosas potenciais, lacunas de informação importantes ou possíveis erros de transcrição que mereçam confirmação.`;
+6. ALERTAS — red flags do quadro, interações medicamentosas potenciais, lacunas de informação importantes ou possíveis erros de transcrição que mereçam confirmação.
+
+7. PRONTUÁRIO — redija a anamnese completa em formato clínico tradicional, pronta para colar no prontuário eletrônico. Texto corrido e objetivo por seção, em terceira pessoa ("Paciente refere..."), usando exatamente esta estrutura (em MAIÚSCULAS, omitindo seções sem nenhuma informação):
+
+QUEIXA PRINCIPAL:
+HISTÓRIA DA DOENÇA ATUAL:
+ANTECEDENTES PESSOAIS:
+MEDICAMENTOS EM USO:
+ANTECEDENTES FAMILIARES:
+HÁBITOS DE VIDA:
+EXAME FÍSICO:
+HIPÓTESES DIAGNÓSTICAS:
+CONDUTA:
+
+Na CONDUTA, inclua exames solicitados, prescrição, orientações, metas acordadas e retorno.`;
 
 const SYSTEM_PLANO = `${SYSTEM_BASE}
 
@@ -141,6 +173,7 @@ const SCHEMA_ANALISE = s.obj({
   ),
   proximosPassos: s.arrStr,
   alertas: s.arrStr,
+  prontuario: s.str,
 });
 
 const SCHEMA_PLANO = s.obj({
@@ -313,6 +346,56 @@ function chamarIA(args) {
   return IA_PROVIDER === "ollama" ? chamarOllama(args) : chamarClaude(args);
 }
 
+// Transcreve o áudio da consulta com Whisper (API compatível com OpenAI)
+async function transcreverAudio(audioBuffer, mime) {
+  const cfg = TRANSCRITORES[TRANSCRIBER];
+  if (!cfg) {
+    const err = new Error("Transcrição no servidor não está configurada (TRANSCRIBER=browser).");
+    err.status = 400;
+    throw err;
+  }
+  const chave = cfg.chave();
+  if (!chave) {
+    const err = new Error(`${cfg.nomeChave} não configurada no .env — necessária para a transcrição com Whisper.`);
+    err.status = 500;
+    throw err;
+  }
+
+  const form = new FormData();
+  const extensao = /ogg/.test(mime) ? "ogg" : /mp4|m4a/.test(mime) ? "m4a" : "webm";
+  form.append("file", new Blob([audioBuffer], { type: mime }), `consulta.${extensao}`);
+  form.append("model", cfg.modelo);
+  form.append("language", "pt");
+  form.append("response_format", "json");
+  form.append(
+    "prompt",
+    "Consulta médica em português do Brasil entre médico e paciente; termos médicos, nomes de medicamentos e exames."
+  );
+
+  let resposta;
+  try {
+    resposta = await fetch(cfg.url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${chave}` },
+      body: form,
+    });
+  } catch (e) {
+    const err = new Error(`Não foi possível conectar ao serviço de transcrição (${TRANSCRIBER}). Verifique sua internet.`);
+    err.status = 502;
+    throw err;
+  }
+  if (!resposta.ok) {
+    const corpo = await resposta.text().catch(() => "");
+    let detalhe = corpo;
+    try { detalhe = JSON.parse(corpo).error?.message || corpo; } catch (_) {}
+    const err = new Error(`Erro do serviço de transcrição (${resposta.status}): ${detalhe}`);
+    err.status = 502;
+    throw err;
+  }
+  const dados = await resposta.json();
+  return (dados.text || "").trim();
+}
+
 // ---------------------------------------------------------------------------
 // Rotas
 // ---------------------------------------------------------------------------
@@ -353,12 +436,33 @@ app.post("/api/plano-estilo-vida", async (req, res) => {
   }
 });
 
+app.post(
+  "/api/transcrever",
+  express.raw({ type: ["audio/*", "video/webm", "application/octet-stream"], limit: "100mb" }),
+  async (req, res) => {
+    try {
+      if (!req.body || !req.body.length) {
+        return res.status(400).json({ erro: "Nenhum áudio recebido." });
+      }
+      const texto = await transcreverAudio(req.body, req.headers["content-type"] || "audio/webm");
+      if (!texto) {
+        return res.status(422).json({ erro: "A transcrição voltou vazia — o áudio pode estar sem fala audível." });
+      }
+      res.json({ texto });
+    } catch (e) {
+      console.error("Erro em /api/transcrever:", e);
+      res.status(e.status || 500).json({ erro: e.message || "Erro interno ao transcrever o áudio." });
+    }
+  }
+);
+
 app.get("/api/saude", (req, res) => {
   res.json({
     ok: true,
     provedor: IA_PROVIDER,
     modelo: IA_PROVIDER === "ollama" ? OLLAMA_MODEL : MODEL,
     apiKeyConfigurada: Boolean(process.env.ANTHROPIC_API_KEY),
+    transcritor: TRANSCRITORES[TRANSCRIBER] && TRANSCRITORES[TRANSCRIBER].chave() ? TRANSCRIBER : "browser",
   });
 });
 

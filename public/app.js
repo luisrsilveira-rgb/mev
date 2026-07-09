@@ -22,10 +22,16 @@
 
   let gravando = false;
   let reconhecimento = null;
+  let mediaRecorder = null;
+  let streamAudio = null;
+  let chunksAudio = [];
   let ultimaAnalise = null;
   let ultimoPlano = null;
   let timerConsulta = null;
   let inicioConsulta = null;
+  // "browser" = reconhecimento do navegador | "groq"/"openai" = áudio gravado
+  // e transcrito no servidor com Whisper (melhor qualidade para termos médicos)
+  let modoTranscricao = "browser";
 
   // -------------------------------------------------------------------------
   // Reconhecimento de voz (Web Speech API)
@@ -76,7 +82,45 @@
     el.tempoConsulta.textContent = `${mm}:${ss}`;
   }
 
+  function marcarGravando() {
+    gravando = true;
+    inicioConsulta = Date.now();
+    atualizarTempo();
+    timerConsulta = setInterval(atualizarTempo, 1000);
+    el.indicadorEscuta.hidden = false;
+    el.btnGravar.textContent = "⏹️ Finalizar consulta e gerar resumo";
+    el.btnGravar.classList.add("gravando");
+    el.statusGravacao.textContent = "";
+  }
+
   function iniciarGravacao() {
+    if (modoTranscricao !== "browser" && navigator.mediaDevices?.getUserMedia) {
+      // Grava o áudio da consulta; a transcrição (Whisper) acontece ao finalizar
+      navigator.mediaDevices
+        .getUserMedia({ audio: { channelCount: 1 } })
+        .then((stream) => {
+          streamAudio = stream;
+          chunksAudio = [];
+          const tipo = window.MediaRecorder?.isTypeSupported?.("audio/webm;codecs=opus")
+            ? "audio/webm;codecs=opus"
+            : "";
+          mediaRecorder = new MediaRecorder(
+            stream,
+            tipo ? { mimeType: tipo, audioBitsPerSecond: 32000 } : undefined
+          );
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size) chunksAudio.push(e.data);
+          };
+          mediaRecorder.start(1000);
+          marcarGravando();
+        })
+        .catch(() => {
+          el.statusGravacao.textContent =
+            "⛔ Acesso ao microfone negado. Verifique as permissões do navegador.";
+        });
+      return;
+    }
+    // Modo navegador (Web Speech API)
     if (!SpeechRecognition) {
       el.statusGravacao.textContent =
         "⛔ Este navegador não suporta reconhecimento de voz. Use Google Chrome ou Microsoft Edge.";
@@ -89,17 +133,18 @@
       el.statusGravacao.textContent = "Erro ao iniciar o microfone: " + e.message;
       return;
     }
-    gravando = true;
-    inicioConsulta = Date.now();
-    atualizarTempo();
-    timerConsulta = setInterval(atualizarTempo, 1000);
-    el.indicadorEscuta.hidden = false;
-    el.btnGravar.textContent = "⏹️ Finalizar consulta e gerar resumo";
-    el.btnGravar.classList.add("gravando");
-    el.statusGravacao.textContent = "";
+    marcarGravando();
   }
 
-  function pararGravacao() {
+  function encerrarStream() {
+    if (streamAudio) {
+      streamAudio.getTracks().forEach((t) => t.stop());
+      streamAudio = null;
+    }
+    mediaRecorder = null;
+  }
+
+  function pararCaptura() {
     gravando = false;
     if (reconhecimento) {
       reconhecimento.onend = null;
@@ -114,6 +159,54 @@
     el.statusGravacao.textContent = "Consulta finalizada.";
   }
 
+  // Cancela a captação sem gerar resumo (ex.: consentimento desmarcado)
+  function pararGravacao() {
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.onstop = null;
+      try { mediaRecorder.stop(); } catch (_) {}
+    }
+    encerrarStream();
+    pararCaptura();
+  }
+
+  // Finaliza a consulta: obtém a transcrição e dispara o resumo automaticamente
+  async function finalizarConsulta() {
+    if (modoTranscricao !== "browser" && mediaRecorder) {
+      const rec = mediaRecorder;
+      const fim = new Promise((resolve) => { rec.onstop = resolve; });
+      if (rec.state !== "inactive") rec.stop();
+      pararCaptura();
+      await fim;
+      const blob = new Blob(chunksAudio, { type: rec.mimeType || "audio/webm" });
+      encerrarStream();
+      if (!blob.size) {
+        el.statusAnalise.textContent = "⚠️ Nenhum áudio captado.";
+        return;
+      }
+      el.statusAnalise.textContent = `🎧 Transcrevendo o áudio da consulta (${(blob.size / 1048576).toFixed(1)} MB)…`;
+      try {
+        const resposta = await fetch("/api/transcrever", {
+          method: "POST",
+          headers: { "Content-Type": blob.type || "audio/webm" },
+          body: blob,
+        });
+        const dados = await resposta.json().catch(() => ({}));
+        if (!resposta.ok) throw new Error(dados.erro || `Erro ${resposta.status}`);
+        const atual = el.transcricao.value.trim();
+        el.transcricao.value = atual ? atual + "\n" + dados.texto : dados.texto;
+      } catch (e) {
+        el.statusAnalise.textContent = "⛔ Falha na transcrição: " + e.message;
+        return;
+      }
+      el.btnAnalisar.click();
+    } else {
+      pararGravacao();
+      // Pequena espera para o reconhecimento entregar o último trecho de fala
+      el.statusAnalise.textContent = "Finalizando transcrição…";
+      setTimeout(() => el.btnAnalisar.click(), 800);
+    }
+  }
+
   el.consentimento.addEventListener("change", () => {
     el.btnGravar.disabled = !el.consentimento.checked;
     if (el.consentimento.checked) {
@@ -126,15 +219,7 @@
   });
 
   el.btnGravar.addEventListener("click", () => {
-    if (gravando) {
-      pararGravacao();
-      // Pequena espera para o reconhecimento entregar o último trecho de fala,
-      // então o resumo é gerado automaticamente
-      el.statusAnalise.textContent = "Finalizando transcrição…";
-      setTimeout(() => el.btnAnalisar.click(), 800);
-    } else {
-      iniciarGravacao();
-    }
+    gravando ? finalizarConsulta() : iniciarGravacao();
   });
 
   // -------------------------------------------------------------------------
@@ -210,17 +295,21 @@
 
   el.btnImprimir.addEventListener("click", () => window.print());
 
-  // Mostra qual IA está configurada (Claude ou modelo local via Ollama)
+  // Mostra qual IA está configurada e define o modo de transcrição
   fetch("/api/saude")
     .then((r) => r.json())
     .then((s) => {
+      if (s.transcritor && s.transcritor !== "browser") {
+        modoTranscricao = s.transcritor;
+      }
       const badge = $("badge-ia");
       if (!badge) return;
       badge.hidden = false;
+      const audio = modoTranscricao === "browser" ? "áudio: navegador" : `áudio: Whisper (${modoTranscricao})`;
       if (s.provedor === "ollama") {
-        badge.textContent = `IA local (Ollama · ${s.modelo})`;
+        badge.textContent = `IA local (Ollama · ${s.modelo}) · ${audio}`;
       } else if (s.apiKeyConfigurada) {
-        badge.textContent = `Claude (${s.modelo})`;
+        badge.textContent = `Claude (${s.modelo}) · ${audio}`;
       } else {
         badge.textContent = "⚠️ IA não configurada — veja o README";
       }
@@ -318,6 +407,16 @@
       </div>`;
   }
 
+  function renderProntuario(a) {
+    if (!a?.prontuario) return `<p class="vazio">Sem documento gerado.</p>`;
+    return `
+      <div class="controles-gravacao">
+        <button type="button" class="btn btn-secundario" id="btn-copiar-prontuario">📋 Copiar para o prontuário</button>
+        <span class="status">Anamnese em formato clínico — revise antes de colar no prontuário eletrônico.</span>
+      </div>
+      <pre class="prontuario">${esc(a.prontuario)}</pre>`;
+  }
+
   function renderPlano(p) {
     if (!p) return `<p class="vazio">Clique em “Gerar plano de estilo de vida”.</p>`;
     const metas = (p.metasSmart || [])
@@ -374,6 +473,7 @@
   function renderizarResultados(abaInicial) {
     const abas = [
       { id: "resumo", rotulo: "📋 Resumo", render: () => renderResumo(ultimaAnalise) },
+      { id: "prontuario", rotulo: "📄 Prontuário", render: () => renderProntuario(ultimaAnalise) },
       { id: "exames", rotulo: "🔬 Exames", render: () => renderExames(ultimaAnalise) },
       { id: "prescricao", rotulo: "💊 Prescrição", render: () => renderPrescricao(ultimaAnalise) },
       { id: "diferencial", rotulo: "🧩 Dx diferencial", render: () => renderDiferencial(ultimaAnalise) },
@@ -391,6 +491,15 @@
       el.abas.querySelectorAll(".aba").forEach((b) =>
         b.classList.toggle("ativa", b.dataset.aba === aba.id)
       );
+      const btnCopiar = $("btn-copiar-prontuario");
+      if (btnCopiar) {
+        btnCopiar.addEventListener("click", () => {
+          navigator.clipboard.writeText(ultimaAnalise?.prontuario || "").then(() => {
+            btnCopiar.textContent = "✅ Copiado!";
+            setTimeout(() => { btnCopiar.textContent = "📋 Copiar para o prontuário"; }, 2000);
+          });
+        });
+      }
     };
 
     el.abas.querySelectorAll(".aba").forEach((b) =>

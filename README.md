@@ -4,6 +4,7 @@ Assistente de consultas médicas com foco em **medicina do estilo de vida**. O a
 
 - 🎙️ **Escuta o áudio ambiente** da consulta (médico + paciente) discretamente — nada é exibido durante o atendimento
 - 📋 **Ao finalizar, resume automaticamente** por tópicos: queixa principal, sintomas, doenças prévias, medicamentos em uso, hábitos de vida e metas acordadas na consulta
+- 📄 **Gera a anamnese em formato clínico** (QP, HDA, antecedentes, exame físico, hipóteses, conduta), pronta para copiar no prontuário eletrônico
 - 🔬 **Separa os exames** conforme você dita ("vou solicitar hemograma…") e sugere exames complementares
 - 💊 **Monta a prescrição** a partir do que você dita (medicamento, dose, via, frequência, duração)
 - 🧩 **Diagnóstico diferencial** com IA (Claude **ou** modelo local gratuito via Ollama): hipóteses ordenadas por probabilidade, fundamentação e próximos passos
@@ -57,7 +58,22 @@ ANTHROPIC_API_KEY=sk-ant-sua-chave
    # OLLAMA_MODEL=llama3.1:8b   (padrão)
    ```
 
-Com o Ollama, **nenhum dado sai do seu computador** — a transcrição da consulta é analisada localmente, o que é um ganho de privacidade. Em compensação:
+### Transcrição profissional do áudio (recomendado)
+
+Por padrão o app usa o reconhecimento de voz do navegador, que é gratuito mas erra termos médicos. Para qualidade profissional (como os serviços comerciais de transcrição de consultas), ative o **Whisper via Groq — gratuito**:
+
+1. Crie uma chave gratuita em [console.groq.com/keys](https://console.groq.com/keys)
+2. No `.env`:
+   ```env
+   TRANSCRIBER=groq
+   GROQ_API_KEY=gsk_sua-chave
+   ```
+
+Com isso, o app grava o áudio da consulta e o transcreve com o modelo `whisper-large-v3-turbo` ao finalizar — muito mais preciso para nomes de medicamentos, exames e termos clínicos. (Alternativa paga: `TRANSCRIBER=openai` com `OPENAI_API_KEY`.)
+
+> Nota de privacidade: no modo `groq`/`openai`, o áudio da consulta é enviado ao serviço de transcrição escolhido. No modo `browser`, o áudio é processado pelo serviço de voz do próprio navegador (Google).
+
+Com o Ollama, **nenhum dado da análise sai do seu computador** — a transcrição da consulta é analisada localmente, o que é um ganho de privacidade. Em compensação:
 
 - ⚠️ Modelos locais pequenos (7–8B) têm **qualidade clínica bem inferior** ao Claude: hipóteses diagnósticas mais rasas, maior chance de erros e de itens inventados. Revise com atenção redobrada.
 - Se seu computador aguentar (16 GB+ de RAM), `ollama pull qwen2.5:14b` e `OLLAMA_MODEL=qwen2.5:14b` melhoram bastante o resultado.
@@ -70,7 +86,7 @@ Com o Ollama, **nenhum dado sai do seu computador** — a transcrição da consu
    - *"Vou solicitar hemograma completo, perfil lipídico e TSH."*
    - *"Prescrevo metformina 500 mg, via oral, duas vezes ao dia, uso contínuo, tomar junto às refeições."*
    - *"Então combinamos: caminhada 3 vezes por semana e dormir até as 23h."*
-3. **Finalizar** — clique em *Finalizar consulta e gerar resumo*. O app gera automaticamente as abas **Resumo** (sintomas, doenças prévias, medicamentos em uso, hábitos, metas acordadas), **Exames**, **Prescrição** e **Dx diferencial**. A transcrição fica disponível para conferência em "Ver/editar transcrição".
+3. **Finalizar** — clique em *Finalizar consulta e gerar resumo*. O app gera automaticamente as abas **Resumo** (sintomas, doenças prévias, medicamentos em uso, hábitos, metas acordadas), **Prontuário** (anamnese clínica pronta para copiar), **Exames**, **Prescrição** e **Dx diferencial**. A transcrição fica disponível para conferência em "Ver/editar transcrição".
 4. **Estilo de vida** — clique em *Gerar plano de estilo de vida* para as metas SMART, dieta e plano de exercícios personalizados.
 5. **Imprimir/PDF** — imprime a aba ativa (útil para entregar o plano ao paciente).
 

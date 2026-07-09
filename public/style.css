@@ -179,6 +179,19 @@ th { background: #eef2f6; font-size: 0.82rem; text-transform: uppercase; letter-
 .item-prescricao:last-child { border-bottom: none; }
 .orientacao { font-size: 0.88rem; color: var(--texto-suave); margin-top: 2px; }
 
+/* Prontuário */
+.prontuario {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.93rem;
+  background: #fbfdff;
+  border: 1px solid var(--borda);
+  border-left: 4px solid var(--azul);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 0;
+}
+
 /* Plano */
 .secao-plano { font-size: 1.1rem; color: var(--azul-escuro); margin: 20px 0 10px; }
 .smart { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; margin: 8px 0 0; font-size: 0.92rem; }
