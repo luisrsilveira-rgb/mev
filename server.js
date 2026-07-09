@@ -51,7 +51,15 @@ const SYSTEM_ANALISE = `${SYSTEM_BASE}
 
 Sua tarefa agora: analisar a transcrição de uma consulta e produzir, no formato JSON solicitado:
 
-1. RESUMO ESTRUTURADO — os tópicos mais importantes da consulta (queixa principal, história da doença atual, antecedentes relevantes, hábitos de vida, exame físico se citado, etc.). Só inclua tópicos que tenham conteúdo real na transcrição.
+1. RESUMO ESTRUTURADO — preencha os campos do resumo a partir do que foi dito na consulta:
+   - queixaPrincipal: o motivo principal da consulta;
+   - sintomas: lista dos sintomas relatados, com duração/característica quando citadas;
+   - doencasPrevias: doenças prévias e comorbidades mencionadas (do paciente; inclua história familiar relevante indicando "história familiar:");
+   - medicamentosEmUso: medicamentos que o paciente JÁ usa (com dose/frequência se citadas) — não confundir com a prescrição nova feita nesta consulta;
+   - habitosDeVida: sono, alimentação, atividade física, tabagismo, álcool, estresse, trabalho;
+   - metasAcordadas: o que foi combinado/acertado entre médico(a) e paciente durante a consulta (metas de hábitos, compromissos, mudanças, data de retorno);
+   - outrosTopicos: demais tópicos relevantes (exame físico, contexto psicossocial, exames anteriores trazidos, etc.).
+   Use listas vazias quando o assunto não tiver sido abordado — não invente conteúdo.
 
 2. EXAMES — separe TODOS os exames que o(a) médico(a) ditou/solicitou durante a consulta (frases como "vou solicitar", "solicito", "pedir um", "vamos fazer um"). Se o quadro clínico sugerir exames adicionais úteis que NÃO foram ditados, inclua-os marcados com origem "sugerido".
 
@@ -98,7 +106,12 @@ const s = {
 const SCHEMA_ANALISE = s.obj({
   resumo: s.obj({
     queixaPrincipal: s.str,
-    topicos: s.arr(s.obj({ titulo: s.str, conteudo: s.str })),
+    sintomas: s.arrStr,
+    doencasPrevias: s.arrStr,
+    medicamentosEmUso: s.arrStr,
+    habitosDeVida: s.arrStr,
+    metasAcordadas: s.arrStr,
+    outrosTopicos: s.arr(s.obj({ titulo: s.str, conteudo: s.str })),
   }),
   exames: s.arr(
     s.obj({

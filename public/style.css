@@ -91,17 +91,29 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--azul); outl
 }
 @keyframes pulsar { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
-.interim {
-  font-style: italic;
-  color: var(--texto-suave);
-  background: #eef4fb;
-  border-radius: 6px;
-  padding: 6px 10px;
-  margin-bottom: 8px;
-  min-height: 1.4em;
+.indicador-escuta[hidden] { display: none; }
+.indicador-escuta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  background: #fff5f5;
+  border: 1px solid #f3c1c1;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
 }
+.indicador-escuta strong { color: var(--vermelho); }
+.escuta-detalhe { width: 100%; font-size: 0.85rem; color: var(--texto-suave); }
 
-.label-transcricao { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--texto-suave); }
+.detalhes-transcricao { margin-top: 12px; }
+.detalhes-transcricao summary {
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--texto-suave);
+  user-select: none;
+}
+.detalhes-transcricao[open] summary { margin-bottom: 8px; }
 #transcricao { width: 100%; resize: vertical; font-size: 0.95rem; }
 
 .dica { font-size: 0.85rem; color: var(--texto-suave); margin: 10px 0 0; }
@@ -187,7 +199,7 @@ th { background: #eef2f6; font-size: 0.82rem; text-transform: uppercase; letter-
 /* Impressão */
 @media print {
   .topo, .consentimento, .controles-gravacao, .dica, .abas,
-  #interim, .label-transcricao, .card:nth-of-type(1), .card:nth-of-type(2) { display: none !important; }
+  .indicador-escuta, .detalhes-transcricao, .card:nth-of-type(1), .card:nth-of-type(2) { display: none !important; }
   body { background: #fff; }
   .card { border: none; padding: 0; }
   .bloco { break-inside: avoid; }

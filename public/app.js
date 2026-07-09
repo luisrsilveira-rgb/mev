@@ -8,7 +8,8 @@
     consentimento: $("consentimento"),
     btnGravar: $("btn-gravar"),
     statusGravacao: $("status-gravacao"),
-    interim: $("interim"),
+    indicadorEscuta: $("indicador-escuta"),
+    tempoConsulta: $("tempo-consulta"),
     transcricao: $("transcricao"),
     btnAnalisar: $("btn-analisar"),
     btnPlano: $("btn-plano"),
@@ -23,6 +24,8 @@
   let reconhecimento = null;
   let ultimaAnalise = null;
   let ultimoPlano = null;
+  let timerConsulta = null;
+  let inicioConsulta = null;
 
   // -------------------------------------------------------------------------
   // Reconhecimento de voz (Web Speech API)
@@ -36,21 +39,16 @@
     rec.continuous = true;
     rec.interimResults = true;
 
+    // A transcrição é acumulada em segundo plano — nada é exibido durante a consulta
     rec.onresult = (evento) => {
-      let interim = "";
       for (let i = evento.resultIndex; i < evento.results.length; i++) {
         const resultado = evento.results[i];
-        const texto = resultado[0].transcript;
         if (resultado.isFinal) {
+          const texto = resultado[0].transcript.trim();
           const atual = el.transcricao.value;
-          el.transcricao.value = atual + (atual && !atual.endsWith("\n") ? " " : "") + texto.trim();
-          el.transcricao.scrollTop = el.transcricao.scrollHeight;
-        } else {
-          interim += texto;
+          el.transcricao.value = atual + (atual && !atual.endsWith("\n") ? " " : "") + texto;
         }
       }
-      el.interim.textContent = interim;
-      el.interim.hidden = !interim;
     };
 
     rec.onerror = (evento) => {
@@ -71,6 +69,13 @@
     return rec;
   }
 
+  function atualizarTempo() {
+    const s = Math.floor((Date.now() - inicioConsulta) / 1000);
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    el.tempoConsulta.textContent = `${mm}:${ss}`;
+  }
+
   function iniciarGravacao() {
     if (!SpeechRecognition) {
       el.statusGravacao.textContent =
@@ -85,9 +90,13 @@
       return;
     }
     gravando = true;
-    el.btnGravar.textContent = "⏹️ Parar gravação";
+    inicioConsulta = Date.now();
+    atualizarTempo();
+    timerConsulta = setInterval(atualizarTempo, 1000);
+    el.indicadorEscuta.hidden = false;
+    el.btnGravar.textContent = "⏹️ Finalizar consulta e gerar resumo";
     el.btnGravar.classList.add("gravando");
-    el.statusGravacao.innerHTML = '<span class="pulso"></span> Gravando e transcrevendo…';
+    el.statusGravacao.textContent = "";
   }
 
   function pararGravacao() {
@@ -97,25 +106,35 @@
       try { reconhecimento.stop(); } catch (_) {}
       reconhecimento = null;
     }
-    el.interim.hidden = true;
-    el.btnGravar.textContent = "🎙️ Iniciar gravação";
+    clearInterval(timerConsulta);
+    timerConsulta = null;
+    el.indicadorEscuta.hidden = true;
+    el.btnGravar.textContent = "▶️ Iniciar consulta";
     el.btnGravar.classList.remove("gravando");
-    el.statusGravacao.textContent = "Gravação parada. Revise a transcrição antes de analisar.";
+    el.statusGravacao.textContent = "Consulta finalizada.";
   }
 
   el.consentimento.addEventListener("change", () => {
     el.btnGravar.disabled = !el.consentimento.checked;
     if (el.consentimento.checked) {
-      el.statusGravacao.textContent = "Pronto para gravar.";
+      el.statusGravacao.textContent = "Pronto para iniciar a consulta.";
     } else {
       if (gravando) pararGravacao();
-      el.statusGravacao.textContent = "Marque o consentimento para habilitar a gravação.";
+      el.statusGravacao.textContent = "Marque o consentimento para habilitar a escuta.";
       el.btnGravar.disabled = true;
     }
   });
 
   el.btnGravar.addEventListener("click", () => {
-    gravando ? pararGravacao() : iniciarGravacao();
+    if (gravando) {
+      pararGravacao();
+      // Pequena espera para o reconhecimento entregar o último trecho de fala,
+      // então o resumo é gerado automaticamente
+      el.statusAnalise.textContent = "Finalizando transcrição…";
+      setTimeout(() => el.btnAnalisar.click(), 800);
+    } else {
+      iniciarGravacao();
+    }
   });
 
   // -------------------------------------------------------------------------
@@ -152,8 +171,8 @@
     }
     if (gravando) pararGravacao();
 
-    setOcupado(el.btnAnalisar, true, "Analisando…");
-    el.statusAnalise.textContent = "🧠 Analisando a consulta (pode levar até um minuto)…";
+    setOcupado(el.btnAnalisar, true, "Gerando resumo…");
+    el.statusAnalise.textContent = "🧠 Gerando o resumo da consulta (pode levar até um minuto)…";
     try {
       ultimaAnalise = await postJson("/api/consulta/analisar", {
         transcricao,
@@ -163,11 +182,11 @@
       renderizarResultados();
       el.btnPlano.disabled = false;
       el.btnImprimir.hidden = false;
-      el.statusAnalise.textContent = "✅ Análise concluída. Revise cada aba antes de usar.";
+      el.statusAnalise.textContent = "✅ Resumo pronto. Revise cada aba antes de usar.";
     } catch (e) {
       el.statusAnalise.textContent = "⛔ " + e.message;
     } finally {
-      setOcupado(el.btnAnalisar, false, "🧠 Analisar consulta");
+      setOcupado(el.btnAnalisar, false, "🧠 Gerar resumo da consulta");
     }
   });
 
@@ -230,13 +249,17 @@
   const rotuloProb = { alta: "Alta", media: "Média", baixa: "Baixa" };
 
   function renderResumo(a) {
+    const r = a.resumo || {};
+    const bloco = (titulo, corpo) => `<div class="bloco"><h3>${titulo}</h3>${corpo}</div>`;
     return `
-      <div class="bloco">
-        <h3>Queixa principal</h3>
-        <p>${esc(a.resumo?.queixaPrincipal) || "—"}</p>
-      </div>
-      ${(a.resumo?.topicos || [])
-        .map((t) => `<div class="bloco"><h3>${esc(t.titulo)}</h3><p>${esc(t.conteudo)}</p></div>`)
+      ${bloco("Queixa principal", `<p>${esc(r.queixaPrincipal) || "—"}</p>`)}
+      ${bloco("🤒 Sintomas", lista(r.sintomas, "Nenhum sintoma registrado."))}
+      ${bloco("📜 Doenças prévias", lista(r.doencasPrevias, "Nenhuma doença prévia mencionada."))}
+      ${bloco("💊 Medicamentos em uso", lista(r.medicamentosEmUso, "Nenhum medicamento em uso mencionado."))}
+      ${bloco("🏠 Hábitos de vida", lista(r.habitosDeVida, "Não abordado."))}
+      ${bloco("🤝 Metas acordadas na consulta", lista(r.metasAcordadas, "Nenhuma meta acordada registrada."))}
+      ${(r.outrosTopicos || [])
+        .map((t) => bloco(esc(t.titulo), `<p>${esc(t.conteudo)}</p>`))
         .join("")}
       ${a.alertas?.length ? `<div class="bloco alerta"><h3>⚠️ Alertas</h3>${lista(a.alertas)}</div>` : ""}
     `;

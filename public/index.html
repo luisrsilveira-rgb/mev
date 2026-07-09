@@ -46,29 +46,34 @@
       </div>
     </section>
 
-    <!-- Gravação -->
+    <!-- Escuta da consulta -->
     <section class="card">
-      <h2>2. Consulta — áudio ambiente</h2>
+      <h2>2. Consulta — escuta ambiente</h2>
       <label class="consentimento">
         <input type="checkbox" id="consentimento" />
         Informei o(a) paciente e obtive consentimento para a captação do áudio da consulta.
       </label>
       <div class="controles-gravacao">
-        <button id="btn-gravar" class="btn btn-primario" disabled>🎙️ Iniciar gravação</button>
-        <span id="status-gravacao" class="status">Marque o consentimento para habilitar a gravação.</span>
+        <button id="btn-gravar" class="btn btn-primario" disabled>▶️ Iniciar consulta</button>
+        <span id="status-gravacao" class="status">Marque o consentimento para habilitar a escuta.</span>
       </div>
-      <div id="interim" class="interim" hidden></div>
-      <label class="label-transcricao">Transcrição (editável — revise antes de analisar)
-        <textarea id="transcricao" rows="10" placeholder="A transcrição do áudio aparecerá aqui em tempo real. Você também pode digitar ou colar o texto da consulta."></textarea>
-      </label>
-      <p class="dica">💡 Dite naturalmente durante a consulta: <em>"vou solicitar hemograma completo e perfil lipídico"</em>, <em>"prescrevo metformina 500 mg, via oral, duas vezes ao dia, uso contínuo"</em>. O assistente separa exames e prescrição automaticamente.</p>
+      <div id="indicador-escuta" class="indicador-escuta" hidden>
+        <span class="pulso"></span>
+        <strong>Consulta em andamento — <span id="tempo-consulta">00:00</span></strong>
+        <span class="escuta-detalhe">O app está apenas escutando. Nada é exibido durante o atendimento; ao finalizar, o resumo é gerado automaticamente.</span>
+      </div>
+      <p class="dica">💡 Dite naturalmente durante a consulta: <em>"vou solicitar hemograma completo e perfil lipídico"</em>, <em>"prescrevo metformina 500 mg, via oral, duas vezes ao dia, uso contínuo"</em>, <em>"então combinamos caminhar 3 vezes por semana"</em>. O assistente separa exames, prescrição e metas acordadas automaticamente.</p>
+      <details class="detalhes-transcricao">
+        <summary>Ver/editar transcrição (opcional, após finalizar)</summary>
+        <textarea id="transcricao" rows="10" placeholder="A transcrição fica guardada aqui (não é exibida durante a consulta). Você também pode digitar ou colar o texto de uma consulta e clicar em Gerar resumo."></textarea>
+      </details>
     </section>
 
     <!-- Análise -->
     <section class="card">
       <h2>3. Análise da consulta <span id="badge-ia" class="tag" hidden></span></h2>
       <div class="controles-gravacao">
-        <button id="btn-analisar" class="btn btn-primario">🧠 Analisar consulta</button>
+        <button id="btn-analisar" class="btn btn-primario">🧠 Gerar resumo da consulta</button>
         <button id="btn-plano" class="btn btn-secundario" disabled>🥗 Gerar plano de estilo de vida</button>
         <button id="btn-imprimir" class="btn btn-secundario" hidden>🖨️ Imprimir / PDF</button>
         <span id="status-analise" class="status"></span>

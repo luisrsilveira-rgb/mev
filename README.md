@@ -2,8 +2,8 @@
 
 Assistente de consultas médicas com foco em **medicina do estilo de vida**. O aplicativo:
 
-- 🎙️ **Capta o áudio ambiente** da consulta (médico + paciente) e transcreve em tempo real (pt-BR)
-- 📋 **Resume a consulta** nos tópicos mais importantes (queixa principal, história, antecedentes, hábitos…)
+- 🎙️ **Escuta o áudio ambiente** da consulta (médico + paciente) discretamente — nada é exibido durante o atendimento
+- 📋 **Ao finalizar, resume automaticamente** por tópicos: queixa principal, sintomas, doenças prévias, medicamentos em uso, hábitos de vida e metas acordadas na consulta
 - 🔬 **Separa os exames** conforme você dita ("vou solicitar hemograma…") e sugere exames complementares
 - 💊 **Monta a prescrição** a partir do que você dita (medicamento, dose, via, frequência, duração)
 - 🧩 **Diagnóstico diferencial** com IA (Claude **ou** modelo local gratuito via Ollama): hipóteses ordenadas por probabilidade, fundamentação e próximos passos
@@ -66,10 +66,11 @@ Com o Ollama, **nenhum dado sai do seu computador** — a transcrição da consu
 ## Fluxo de uso
 
 1. **Paciente** — preencha nome/iniciais, idade, sexo, peso, altura e comorbidades/medicamentos.
-2. **Consulta** — marque o consentimento do paciente, clique em *Iniciar gravação* e conduza a consulta normalmente. Dite exames e prescrição de forma natural:
+2. **Consulta** — marque o consentimento do paciente e clique em *Iniciar consulta*. O app fica **apenas escutando** (um cronômetro discreto indica que está ativo — nenhum texto aparece na tela). Conduza a consulta normalmente e dite exames, prescrição e combinados de forma natural:
    - *"Vou solicitar hemograma completo, perfil lipídico e TSH."*
    - *"Prescrevo metformina 500 mg, via oral, duas vezes ao dia, uso contínuo, tomar junto às refeições."*
-3. **Analisar** — pare a gravação, revise/edite a transcrição e clique em *Analisar consulta*. O app gera as abas **Resumo**, **Exames**, **Prescrição** e **Dx diferencial**.
+   - *"Então combinamos: caminhada 3 vezes por semana e dormir até as 23h."*
+3. **Finalizar** — clique em *Finalizar consulta e gerar resumo*. O app gera automaticamente as abas **Resumo** (sintomas, doenças prévias, medicamentos em uso, hábitos, metas acordadas), **Exames**, **Prescrição** e **Dx diferencial**. A transcrição fica disponível para conferência em "Ver/editar transcrição".
 4. **Estilo de vida** — clique em *Gerar plano de estilo de vida* para as metas SMART, dieta e plano de exercícios personalizados.
 5. **Imprimir/PDF** — imprime a aba ativa (útil para entregar o plano ao paciente).
 
